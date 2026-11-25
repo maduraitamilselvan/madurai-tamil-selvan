@@ -762,3 +762,14 @@
         aspect-ratio: 16/8
       }
     }
+
+
+    @media (max-width: 768px) {
+  .rail {
+    display: none !important;
+  }
+
+  body {
+    padding-left: 0 !important;
+  }
+}
