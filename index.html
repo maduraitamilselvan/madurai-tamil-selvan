@@ -14,21 +14,19 @@
   <style id="motion">
     :root { --m-ease: cubic-bezier(.22, 1, .36, 1); }
 
-    /* Loader overlay. Colours (--m-bg / --m-fg / --m-ac) are read from your own
-       .rail / .btn / .mark styles at runtime, so it always matches your palette. */
-    .m-loader { position: fixed; inset: 0; z-index: 2147483000; display: none; place-items: center; background: var(--m-bg, #fff); color:  #ffffff; transition: opacity .8s ease, visibility 0s .8s; }
+    /* Loader overlay. Colours (--m-bg / --m-fg) are read from your own .rail styles at runtime,
+       so it always matches your palette. Split reveal: word 1 exits left, word 2 exits right. */
+    :root { --m-split: cubic-bezier(.76, 0, .24, 1); }
+    .m-loader { position: fixed; inset: 0; z-index: 2147483000; display: none; place-items: center; background: var(--m-bg, #fff); color:#fff; }
     .js .m-loader { display: grid; }
     .js .m-loader.m-off { display: none !important; }
-    .m-loader.m-out { opacity: 0; visibility: hidden; pointer-events: none; }
-    .m-loader span {
-      padding: 0 6vw; text-align: center; font: 900 clamp(1.9rem, 7vw, 5rem)/1.35 "Noto Sans Tamil", sans-serif;
-      background: linear-gradient(100deg, var(--m-fg, #111) 40%, var(--m-ac, #888) 50%, var(--m-fg, #111) 60%) 100% 0 / 250% 100% no-repeat;
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-      animation: m-in 1.1s var(--m-ease) both, m-shine 1.7s ease-in-out .5s infinite;
-      color:#ffffff;
-    }
+    .m-words { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 .3em; padding: 0 6vw; text-align: center; font: 900 clamp(1.9rem, 7vw, 5rem)/1.35 "Noto Sans Tamil", sans-serif; animation: m-in 1s var(--m-split) both; }
+    .m-w { display: inline-block; white-space: nowrap; will-change: transform; }
+    .m-loader.m-out { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 1s var(--m-split), visibility 0s 1s; }
+    .m-loader.m-out .m-w { transition: transform 1s var(--m-split); }
+    .m-loader.m-out .m-l { transform: translateX(calc(-50vw - 100%)); }
+    .m-loader.m-out .m-r { transform: translateX(calc(50vw + 100%)); }
     @keyframes m-in { from { opacity: 0; transform: scale(.94); } }
-    @keyframes m-shine { to { background-position: 0 0; } }
     html.m-lock { overflow: hidden; }
 
     /* Entrance animation: hidden until revealed, then slides up. Keyframes have no "to"
@@ -43,15 +41,16 @@
     :where(.btn:active) { transform: translateY(0) scale(.97); }
 
     @media (prefers-reduced-motion: reduce) {
-      .m-loader span { animation: none; }
+      .m-words { animation: none; }
+      .m-loader.m-out .m-w { transition: none; transform: none !important; }
       .m-in { animation: none; }
     }
   </style>
 </head>
 
 <body>
-  <!-- ADDED: Tamil loader (the text is one unit, never split, so ligatures stay intact) -->
-  <div class="m-loader" id="mLoader" role="status" aria-label="Loading"><span lang="ta">மதுரை தமிழ்ச்செல்வன்</span></div>
+  <!-- ADDED: Tamil loader (each word is one unit, never split, so ligatures stay intact) -->
+  <div class="m-loader" id="mLoader" role="status" aria-label="Loading Madurai Tamil Selvan"><div class="m-words" lang="ta" aria-hidden="true"><span class="m-w m-l">மதுரை</span><span class="m-w m-r">தமிழ்ச்செல்வன்</span></div></div>
 
   <div class="wrap">
     <a class="rail" href="#" aria-label="Madurai Tamil Selvan, home"><span lang="ta">மதுரை தமிழ் செல்வன்</span></a>
@@ -203,7 +202,7 @@
   <!-- ===== ADDED: loader + animation logic ===== -->
   <script>
     (function () {
-      var MIN_MS = 1800, MAX_MS = 4500;               // loader shows at least 1.8s, never longer than 4.5s
+      var MIN_MS = 2000, MAX_MS = 4500;               // ~0.9s fade-in + ~1.1s pause, then split; never longer than 4.5s
       var root = document.documentElement, loader = document.getElementById("mLoader");
       var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
       var items = [], io, replaying = false;
@@ -251,14 +250,14 @@
       /* --- 3. Loader lifecycle --- */
       function hide() {
         loader.classList.add("m-out"); root.classList.remove("m-lock");
-        setTimeout(watch, reduce ? 0 : 250);                    // page entrance begins as the overlay fades
-        setTimeout(function () { loader.classList.add("m-off"); replaying = false }, 900);
+        setTimeout(watch, reduce ? 0 : 350);                    // page entrance begins as the words split
+        setTimeout(function () { loader.classList.add("m-off"); replaying = false }, 1050);
       }
       function run() {
         if (replaying) return; replaying = true;
         theme(); arm(); scrollTo(0, 0);
         loader.classList.remove("m-off"); void loader.offsetWidth; loader.classList.remove("m-out"); root.classList.add("m-lock");
-        var spans = loader.querySelector("span"); spans.style.animation = "none"; void spans.offsetWidth; spans.style.animation = "";
+        var words = loader.querySelector(".m-words"); words.style.animation = "none"; void words.offsetWidth; words.style.animation = "";
         var min = new Promise(function (r) { setTimeout(r, reduce ? 500 : MIN_MS) });
         var load = new Promise(function (r) { if (document.readyState === "complete") r(); else addEventListener("load", r) });
         var fonts = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
